@@ -1,0 +1,39 @@
+name: CI
+on:
+  workflow_dispatch:
+jobs:
+  ci:
+    name: '${{ matrix.os.name}} | Java ${{ matrix.java.version}}'
+    runs-on: ${{ matrix.os.id }}
+    timeout-minutes: 60
+    # if: ${{ github.repository == 'spring-projects/spring-framework' }}
+    strategy:
+      matrix:
+        os:
+          - id: ubuntu-latest
+            name: Linux
+        java:
+          - version: 8
+            toolchain: false
+          - version: 17
+            toolchain: true
+          - version: 21
+            toolchain: true
+        exclude:
+          - os:
+              name: Linux
+            java:
+              version: 8
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v4
+      - name: Prepare Gradle Build
+        uses: ./.github/actions/prepare-gradle-build
+        with:
+          java-version: ${{ matrix.java.version }}
+          java-early-access: false
+          java-toolchain: ${{ matrix.java.toolchain }}
+          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_SECRET_ACCESS_KEY }}
+      - name: Test
+        shell: bash
+        run: ./gradlew test
