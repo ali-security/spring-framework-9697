@@ -19,6 +19,7 @@ package org.springframework.web.reactive.resource;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -315,7 +316,7 @@ public class ResourceWebHandler implements WebHandler, InitializingBean {
 			this.mediaTypes = new HashMap<>(mediaTypes.size());
 		}
 		mediaTypes.forEach((ext, type) ->
-				this.mediaTypes.put(ext.toLowerCase(Locale.ENGLISH), type));
+				this.mediaTypes.put(ext.toLowerCase(Locale.ROOT), type));
 	}
 
 	/**
@@ -485,7 +486,8 @@ public class ResourceWebHandler implements WebHandler, InitializingBean {
 	protected String processPath(String path) {
 		path = StringUtils.replace(path, "\\", "/");
 		path = cleanDuplicateSlashes(path);
-		return cleanLeadingSlash(path);
+		path = cleanLeadingSlash(path);
+		return normalizePath(path);
 	}
 
 	private String cleanDuplicateSlashes(String path) {
@@ -526,6 +528,23 @@ public class ResourceWebHandler implements WebHandler, InitializingBean {
 		}
 		return (slash ? "/" : "");
 	}
+
+	private String normalizePath(String path) {
+		if (path.contains("%")) {
+			try {
+				path = URLDecoder.decode(path, StandardCharsets.UTF_8.name());
+			}
+			catch (Exception ex) {
+				return "";
+			}
+			if (path.contains("../")) {
+				path = StringUtils.cleanPath(path);
+			}
+		}
+		return path;
+	}
+
+
 
 	/**
 	 * Check whether the given path contains invalid escape sequences.
@@ -588,7 +607,7 @@ public class ResourceWebHandler implements WebHandler, InitializingBean {
 				return true;
 			}
 		}
-		if (path.contains("..") && StringUtils.cleanPath(path).contains("../")) {
+		if (path.contains("../")) {
 			if (logger.isWarnEnabled()) {
 				logger.warn(LogFormatUtils.formatValue(
 						"Path contains \"../\" after call to StringUtils#cleanPath: [" + path + "]", -1, true));
@@ -605,7 +624,7 @@ public class ResourceWebHandler implements WebHandler, InitializingBean {
 		if (!CollectionUtils.isEmpty(this.mediaTypes)) {
 			String ext = StringUtils.getFilenameExtension(filename);
 			if (ext != null) {
-				mediaType = this.mediaTypes.get(ext.toLowerCase(Locale.ENGLISH));
+				mediaType = this.mediaTypes.get(ext.toLowerCase(Locale.ROOT));
 			}
 		}
 		if (mediaType == null) {

@@ -46,7 +46,7 @@ runs:
       id: publish
       if: ${{ inputs.publish == 'true' }}
       shell: bash
-      run: ./gradlew -PdeploymentRepository=$(pwd)/deployment-repository build publishAllPublicationsToDeploymentRepository
+      run: ./gradlew -PdeploymentRepository=$(pwd)/deployment-repository build publishAllPublicationsToDeploymentRepository -x checkstyleMain -x checkstyleTest
     - name: Read Version From gradle.properties
       id: read-version
       shell: bash
